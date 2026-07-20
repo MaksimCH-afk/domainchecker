@@ -1,7 +1,10 @@
 """FastAPI entrypoint for the `domains` module of monopanel.
 
-Part 1 (Ahrefs quantitative filter) is wired up here. Part 2 (name classifier)
-will mount its own router alongside these under the same app / same panel.
+One app, one process, one panel. Both halves of the pipeline mount here and
+share the same DB file, yet neither core imports the other — Part 1 (Ahrefs
+quantitative filter) and Part 2 (name classifier) are each fully usable on
+their own; the Ahrefs→classifier bridge is an optional one-way handoff of a
+plain domain list.
 """
 
 from __future__ import annotations
