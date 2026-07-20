@@ -141,9 +141,10 @@ export function SettingsView({ config, setConfig }: Props) {
       {section === "scoring" ? (
         <ScoringSettings config={config} setConfig={setConfig} />
       ) : (
-        <AiSettingsStub />
+        <AiSettings />
       )}
 
+      {section === "scoring" && (
       <div className="presets">
         <h3>Пресеты (профиль под нишу/гео)</h3>
         <div className="preset-row">
@@ -173,6 +174,7 @@ export function SettingsView({ config, setConfig }: Props) {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -258,32 +260,158 @@ function ScoringSettings({ config, setConfig }: Props) {
   );
 }
 
-function AiSettingsStub() {
+const MODEL_SUGGESTIONS = ["gpt-5.4-mini", "gpt-5-nano", "gpt-4.1-nano"];
+
+function AiSettings() {
+  const [s, setS] = useState<any | null>(null);
+  const [keysSet, setKeysSet] = useState<Record<string, boolean>>({});
+  const [msg, setMsg] = useState<string | null>(null);
+  const [keyInputs, setKeyInputs] = useState<{ openai: string; openrouter: string }>({
+    openai: "",
+    openrouter: "",
+  });
+
+  useEffect(() => {
+    api.getAiSettings().then((r) => {
+      setS(r.settings);
+      setKeysSet(r.settings.api_keys_set || {});
+    });
+  }, []);
+
+  if (!s) return <div className="muted">Загрузка настроек AI…</div>;
+
+  const set = (k: string, v: any) => setS({ ...s, [k]: v });
+
+  async function save() {
+    const patch: any = { ...s };
+    delete patch.api_keys_set;
+    // Only send non-empty keys so blanks leave existing keys untouched.
+    const api_keys: any = {};
+    if (keyInputs.openai) api_keys.openai = keyInputs.openai;
+    if (keyInputs.openrouter) api_keys.openrouter = keyInputs.openrouter;
+    if (Object.keys(api_keys).length) patch.api_keys = api_keys;
+    const r = await api.saveAiSettings(patch);
+    setS(r.settings);
+    setKeysSet(r.settings.api_keys_set || {});
+    setKeyInputs({ openai: "", openrouter: "" });
+    setMsg("Настройки AI сохранены.");
+  }
+
   return (
-    <div className="card ai-stub">
-      <h3>AI · Классификатор по имени (Часть 2)</h3>
-      <p className="muted">
-        Появится в следующей итерации. Здесь будут: провайдер (OpenAI / OpenRouter),
-        API-ключи (маскируются, не в логах), модель (список + ручной ввод),
-        Batch API (−50%), temperature, размер пакета, concurrency, ретраи,
-        порог confidence и оценка стоимости.
-      </p>
-      <div className="fields disabled">
-        <label className="field">
-          <span>Провайдер</span>
-          <select disabled>
-            <option>OpenAI</option>
-            <option>OpenRouter</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>Модель</span>
-          <input disabled placeholder="gpt-5.4-mini" />
-        </label>
-        <label className="field">
-          <span>Порог confidence</span>
-          <input disabled placeholder="0.7" />
-        </label>
+    <div className="settings-grid">
+      <section className="card">
+        <h3>Провайдер и модель</h3>
+        <div className="fields">
+          <label className="field">
+            <span>Провайдер</span>
+            <select value={s.provider} onChange={(e) => set("provider", e.target.value)}>
+              <option value="openai">OpenAI (основной)</option>
+              <option value="openrouter">OpenRouter (резерв)</option>
+              <option value="mock">Mock (офлайн-демо)</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Модель</span>
+            <input
+              list="models"
+              value={s.model}
+              onChange={(e) => set("model", e.target.value)}
+            />
+            <datalist id="models">
+              {MODEL_SUGGESTIONS.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+          </label>
+          <label className="field wide">
+            <span>base_url (необязательно, OpenAI-совместимый)</span>
+            <input value={s.base_url} onChange={(e) => set("base_url", e.target.value)} />
+          </label>
+          <label className="field wide raw-toggle">
+            <input
+              type="checkbox"
+              checked={s.batch_api}
+              onChange={(e) => set("batch_api", e.target.checked)}
+            />
+            Batch API (−50% к стоимости)
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>API-ключи (маскируются, не в логах)</h3>
+        <div className="fields">
+          <label className="field wide">
+            <span>OpenAI {keysSet.openai ? "· задан ✓" : "· не задан"}</span>
+            <input
+              type="password"
+              placeholder={keysSet.openai ? "•••••••• (оставьте пустым)" : "sk-…"}
+              value={keyInputs.openai}
+              onChange={(e) => setKeyInputs({ ...keyInputs, openai: e.target.value })}
+            />
+          </label>
+          <label className="field wide">
+            <span>OpenRouter {keysSet.openrouter ? "· задан ✓" : "· не задан"}</span>
+            <input
+              type="password"
+              placeholder={keysSet.openrouter ? "•••••••• (оставьте пустым)" : "sk-or-…"}
+              value={keyInputs.openrouter}
+              onChange={(e) => setKeyInputs({ ...keyInputs, openrouter: e.target.value })}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Параметры прогона</h3>
+        <div className="fields">
+          <label className="field">
+            <span>temperature</span>
+            <input type="number" step={0.1} value={s.temperature}
+              onChange={(e) => set("temperature", Number(e.target.value))} />
+          </label>
+          <label className="field">
+            <span>batch_size</span>
+            <input type="number" value={s.batch_size}
+              onChange={(e) => set("batch_size", Number(e.target.value))} />
+          </label>
+          <label className="field">
+            <span>concurrency</span>
+            <input type="number" value={s.concurrency}
+              onChange={(e) => set("concurrency", Number(e.target.value))} />
+          </label>
+          <label className="field">
+            <span>max_retries</span>
+            <input type="number" value={s.max_retries}
+              onChange={(e) => set("max_retries", Number(e.target.value))} />
+          </label>
+          <label className="field">
+            <span>порог confidence</span>
+            <input type="number" step={0.05} value={s.confidence_threshold}
+              onChange={(e) => set("confidence_threshold", Number(e.target.value))} />
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Стоимость (цена за 1K токенов)</h3>
+        <div className="fields">
+          <label className="field">
+            <span>вход $/1K</span>
+            <input type="number" step={0.0001} value={s.price_in_per_1k}
+              onChange={(e) => set("price_in_per_1k", Number(e.target.value))} />
+          </label>
+          <label className="field">
+            <span>выход $/1K</span>
+            <input type="number" step={0.0001} value={s.price_out_per_1k}
+              onChange={(e) => set("price_out_per_1k", Number(e.target.value))} />
+          </label>
+        </div>
+      </section>
+
+      <div className="ai-save">
+        <button className="primary" onClick={save}>Сохранить настройки AI</button>
+        {msg && <span className="ok inline">{msg}</span>}
       </div>
     </div>
   );

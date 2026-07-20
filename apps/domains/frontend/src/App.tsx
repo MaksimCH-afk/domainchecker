@@ -4,6 +4,7 @@ import type { Config } from "./types";
 import { AhrefsView } from "./ahrefs/AhrefsView";
 import { SettingsView } from "./settings/SettingsView";
 import { ClassifierView } from "./classifier/ClassifierView";
+import { HistoryView } from "./history/HistoryView";
 
 type Tab = "ahrefs" | "classifier" | "settings" | "history";
 
@@ -73,15 +74,7 @@ export default function App() {
         {tab === "settings" && (
           <SettingsView config={config} setConfig={setConfig} />
         )}
-        {tab === "history" && (
-          <div className="placeholder">
-            <h2>История и логи</h2>
-            <p>
-              Появится вместе с Частью 2 (классификатор): персист прогонов,
-              разбивка good/bad/review, стоимость, логи INFO/DEBUG.
-            </p>
-          </div>
-        )}
+        {tab === "history" && <HistoryView />}
       </main>
     </div>
   );

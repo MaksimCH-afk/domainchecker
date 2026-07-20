@@ -105,4 +105,77 @@ export const api = {
       })
     );
   },
+
+  // --- Part 2: name classifier ---------------------------------------------
+
+  async preview(text: string): Promise<{
+    recognized: number;
+    valid: number;
+    duplicates: number;
+    invalid: number;
+  }> {
+    return jsonOrThrow(
+      await fetch("/api/classify/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      })
+    );
+  },
+
+  async startRun(text: string, ignoreCache: boolean): Promise<{ run_id: string }> {
+    return jsonOrThrow(
+      await fetch("/api/classify/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, ignore_cache: ignoreCache }),
+      })
+    );
+  },
+
+  async getRun(runId: string): Promise<any> {
+    return jsonOrThrow(await fetch(`/api/classify/runs/${runId}`));
+  },
+
+  async cancelRun(runId: string): Promise<void> {
+    await jsonOrThrow(
+      await fetch(`/api/classify/runs/${runId}/cancel`, { method: "POST" })
+    );
+  },
+
+  async listRuns(): Promise<any[]> {
+    return (await jsonOrThrow(await fetch("/api/classify/runs"))).runs;
+  },
+
+  async getLogs(runId: string): Promise<any[]> {
+    return (await jsonOrThrow(await fetch(`/api/classify/runs/${runId}/logs`))).logs;
+  },
+
+  async exportRun(
+    runId: string,
+    format: "csv" | "txt",
+    bucket: string | null
+  ): Promise<Blob> {
+    const res = await fetch(`/api/classify/runs/${runId}/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ format, bucket }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.blob();
+  },
+
+  async getAiSettings(): Promise<{ settings: any; provider_base_urls: Record<string, string> }> {
+    return jsonOrThrow(await fetch("/api/classify/settings"));
+  },
+
+  async saveAiSettings(data: any): Promise<{ settings: any }> {
+    return jsonOrThrow(
+      await fetch("/api/classify/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      })
+    );
+  },
 };

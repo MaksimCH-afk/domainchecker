@@ -11,7 +11,9 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import ahrefs_routes, config_routes
+from .api import ahrefs_routes, classify_routes, config_routes, settings_routes
+from .classifier.engine import RunManager
+from .classifier.store import ClassifierStore
 from .store import DatasetStore, PresetStore
 
 DB_PATH = os.environ.get("DOMAINS_DB_PATH", "./data/domains.db")
@@ -29,6 +31,8 @@ app.add_middleware(
 # Initialize stores eagerly so state exists for every request (incl. tests).
 app.state.datasets = DatasetStore()
 app.state.presets = PresetStore(DB_PATH)
+app.state.classifier_store = ClassifierStore(DB_PATH)
+app.state.run_manager = RunManager()
 
 
 @app.get("/api/health")
@@ -36,5 +40,9 @@ def health() -> dict:
     return {"status": "ok", "module": "domains"}
 
 
+# Part 1: Ahrefs quantitative filter.
 app.include_router(ahrefs_routes.router)
 app.include_router(config_routes.router)
+# Part 2: name classifier.
+app.include_router(classify_routes.router)
+app.include_router(settings_routes.router)

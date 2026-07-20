@@ -171,6 +171,33 @@ textarea { width: 100%; resize: vertical; font-family: ui-monospace, Menlo, mono
 .preset-tag button { background: transparent; border: none; }
 .preset-tag .x { color: var(--rejected); padding-left: 4px; }
 
-.ai-stub p { max-width: 640px; }
 .bridge-note { background: #10233f; border: 1px solid var(--b); color: #cfe3ff;
   padding: 10px 12px; border-radius: 8px; margin: 12px 0; }
+
+/* Part 2 — classifier */
+.run-controls { display: flex; gap: 14px; align-items: center; margin: 10px 0; }
+.progress-wrap { margin: 14px 0; }
+.progress-bar { height: 8px; background: var(--panel-2); border-radius: 6px;
+  overflow: hidden; border: 1px solid var(--border); }
+.progress-fill { height: 100%; background: var(--accent); transition: width .3s; }
+.progress-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;
+  color: var(--muted); margin-top: 8px; }
+.bucket-seg { margin: 14px 0 10px; }
+.bucket-actions { margin-bottom: 10px; }
+.verdict { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.v-good { background: #10331b; color: var(--a); }
+.v-bad { background: #3a1416; color: var(--rejected); }
+.v-error { background: #33280c; color: var(--c); }
+.lang-filter { display: flex; gap: 10px; align-items: center; margin: 8px 0; }
+.ai-save { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; }
+.ok.inline { margin: 0; padding: 6px 10px; }
+
+.detail { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+.logs { background: #0b0e13; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px; font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+  max-height: 420px; overflow: auto; }
+.log-line { display: flex; gap: 10px; padding: 2px 0; }
+.log-ts { color: #5a6675; white-space: nowrap; }
+.log-lvl { width: 52px; color: var(--muted); }
+.lvl-error .log-lvl { color: var(--rejected); }
+.lvl-debug { color: #7d8899; }
