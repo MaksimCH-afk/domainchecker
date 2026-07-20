@@ -1,0 +1,26 @@
+# monopanel — Docker stack.
+# The `domains` module (this repo) exposes one panel (frontend) backed by one
+# module service (backend). Sibling apps (apps/cf, apps/content, …) attach to
+# the same stack the same way.
+
+services:
+  domains-backend:
+    build: ./apps/domains/backend
+    container_name: monopanel-domains-backend
+    environment:
+      DOMAINS_DB_PATH: /data/domains.db
+    volumes:
+      - domains-data:/data
+    restart: unless-stopped
+
+  domains-frontend:
+    build: ./apps/domains/frontend
+    container_name: monopanel-domains-frontend
+    depends_on:
+      - domains-backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  domains-data:
