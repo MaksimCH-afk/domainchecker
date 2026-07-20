@@ -6,7 +6,6 @@
 services:
   domains-backend:
     build: ./apps/domains/backend
-    container_name: monopanel-domains-backend
     environment:
       DOMAINS_DB_PATH: /data/domains.db
     volumes:
@@ -15,7 +14,6 @@ services:
 
   domains-frontend:
     build: ./apps/domains/frontend
-    container_name: monopanel-domains-frontend
     depends_on:
       - domains-backend
     ports:
