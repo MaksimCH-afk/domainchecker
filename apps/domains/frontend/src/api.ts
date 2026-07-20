@@ -178,4 +178,17 @@ export const api = {
       })
     );
   },
+
+  async verifyKey(
+    provider: string,
+    apiKey: string | null
+  ): Promise<{ ok: boolean; message: string }> {
+    return jsonOrThrow(
+      await fetch("/api/classify/settings/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, api_key: apiKey }),
+      })
+    );
+  },
 };

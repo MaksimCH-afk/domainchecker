@@ -129,6 +129,37 @@ class MockProvider:
                                 completion_tokens=len(out) * 20)
 
 
+async def verify_key(provider: str, api_key: str, base_url: str = "") -> tuple[bool, str]:
+    """Test an API key with a lightweight GET /models call.
+
+    Returns (ok, human-readable message). Used by the Settings "verify" button.
+    """
+    if provider == "mock":
+        return True, "Mock-провайдер: ключ не требуется."
+    if not api_key:
+        return False, "Ключ не задан."
+    url = (base_url or PROVIDER_BASE_URLS.get(provider) or "").rstrip("/")
+    if not url:
+        return False, f"Неизвестный провайдер '{provider}'."
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                f"{url}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+    except (httpx.TimeoutException, httpx.TransportError) as e:
+        return False, f"Сеть недоступна: {e}"
+    if resp.status_code == 200:
+        try:
+            n = len(resp.json().get("data", []))
+            return True, f"Ключ валиден. Доступно моделей: {n}."
+        except Exception:  # noqa: BLE001
+            return True, "Ключ валиден."
+    if resp.status_code in (401, 403):
+        return False, "Ключ отклонён провайдером (401/403). Проверьте значение."
+    return False, f"Провайдер вернул HTTP {resp.status_code}."
+
+
 def build_provider(settings: dict):
     """Instantiate a provider from persisted settings."""
     provider = settings.get("provider", "openai")

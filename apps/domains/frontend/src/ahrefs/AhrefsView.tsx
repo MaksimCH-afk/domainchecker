@@ -4,6 +4,7 @@ import type { AnalyzeResponse, Config, ResultRow, Tier, UploadStats } from "../t
 import { setPath } from "../configUtil";
 import { SummaryBar } from "./SummaryBar";
 import { ResultsTable } from "./ResultsTable";
+import { AhrefsGuide } from "./AhrefsGuide";
 
 const ALL_TIERS: Tier[] = ["A", "B", "C", "Review", "Rejected"];
 
@@ -116,6 +117,8 @@ export function AhrefsView({ config, setConfig, onBridge }: Props) {
           пересчёт мгновенный без повторной загрузки.
         </p>
       </header>
+
+      <AhrefsGuide />
 
       <UploadArea onFile={onUpload} stats={stats} busy={busy} />
 

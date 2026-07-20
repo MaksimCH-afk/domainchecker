@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { Config } from "./types";
 import { AhrefsView } from "./ahrefs/AhrefsView";
@@ -6,20 +6,14 @@ import { SettingsView } from "./settings/SettingsView";
 import { ClassifierView } from "./classifier/ClassifierView";
 import { HistoryView } from "./history/HistoryView";
 
-type Tab = "ahrefs" | "classifier" | "settings" | "history";
-
-const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "ahrefs", label: "Ahrefs-фильтр", hint: "Количественный гейт" },
-  { id: "classifier", label: "Классификатор", hint: "Гейт по имени" },
-  { id: "settings", label: "Настройки", hint: "Scoring + AI" },
-  { id: "history", label: "История и логи", hint: "" },
-];
+type Drawer = null | "settings" | "history";
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("ahrefs");
   const [config, setConfig] = useState<Config | null>(null);
   // The bridge: Targets handed from Part 1 (Ahrefs) to Part 2 (classifier).
   const [bridgedTargets, setBridgedTargets] = useState<string[]>([]);
+  const [drawer, setDrawer] = useState<Drawer>(null);
+  const classifierRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.getDefaultConfig().then(setConfig).catch(() => setConfig({}));
@@ -27,55 +21,64 @@ export default function App() {
 
   function sendToClassifier(targets: string[]) {
     setBridgedTargets(targets);
-    setTab("classifier");
+    // Both tools live in one window — just scroll down to the classifier.
+    classifierRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   if (!config) return <div className="loading">Загрузка конфигурации…</div>;
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <header className="topbar">
         <div className="brand">
           <span className="brand-mark">◧</span>
           <div>
-            <div className="brand-title">monopanel</div>
-            <div className="brand-sub">apps / domains</div>
+            <div className="brand-title">monopanel · Домены</div>
+            <div className="brand-sub">
+              Единый пайплайн отбора: авторитет/спам&nbsp;→&nbsp;имя
+            </div>
           </div>
         </div>
-        <nav>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={`nav-item ${tab === t.id ? "active" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              <span>{t.label}</span>
-              {t.hint && <em>{t.hint}</em>}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-foot">
-          Единый пайплайн отбора доменов:
-          <br /> авторитет/спам → имя.
+        <div className="topbar-actions">
+          <button onClick={() => setDrawer("settings")}>⚙ Настройки</button>
+          <button onClick={() => setDrawer("history")}>🕘 История и логи</button>
         </div>
-      </aside>
+      </header>
 
+      {/* Both tools in ONE window — no tab switching. */}
       <main className="content">
-        {tab === "ahrefs" && (
-          <AhrefsView
-            config={config}
-            setConfig={setConfig}
-            onBridge={sendToClassifier}
-          />
-        )}
-        {tab === "classifier" && (
+        <section className="tool-section">
+          <AhrefsView config={config} setConfig={setConfig} onBridge={sendToClassifier} />
+        </section>
+
+        <div className="tool-divider">
+          <span>↓ Мост: домены из тиров выше можно отправить в классификатор ↓</span>
+        </div>
+
+        <section className="tool-section" ref={classifierRef}>
           <ClassifierView bridgedTargets={bridgedTargets} />
-        )}
-        {tab === "settings" && (
-          <SettingsView config={config} setConfig={setConfig} />
-        )}
-        {tab === "history" && <HistoryView />}
+        </section>
       </main>
+
+      {drawer && (
+        <div className="drawer-overlay" onClick={() => setDrawer(null)}>
+          <aside className="drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-head">
+              <span>{drawer === "settings" ? "Настройки" : "История и логи"}</span>
+              <button className="drawer-close" onClick={() => setDrawer(null)}>
+                ✕
+              </button>
+            </div>
+            <div className="drawer-body">
+              {drawer === "settings" ? (
+                <SettingsView config={config} setConfig={setConfig} />
+              ) : (
+                <HistoryView />
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

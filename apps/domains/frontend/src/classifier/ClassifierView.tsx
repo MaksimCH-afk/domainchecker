@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { BucketTable } from "./BucketTable";
+import { ClassifierGuide } from "./ClassifierGuide";
 
 type Bucket = "good" | "bad" | "review";
 const BUCKETS: { id: Bucket; label: string }[] = [
@@ -97,6 +98,8 @@ export function ClassifierView({ bridgedTargets }: { bridgedTargets: string[] })
           Провайдер и модель — в «Настройках» → AI.
         </p>
       </header>
+
+      <ClassifierGuide />
 
       {bridgedTargets.length > 0 && (
         <div className="bridge-note">

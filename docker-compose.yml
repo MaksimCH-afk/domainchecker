@@ -19,7 +19,7 @@ services:
     depends_on:
       - domains-backend
     ports:
-      - "43784:80"
+      - "43784:43784"
     restart: unless-stopped
 
 volumes:

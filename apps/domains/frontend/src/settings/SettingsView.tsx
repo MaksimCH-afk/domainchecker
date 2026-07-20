@@ -64,7 +64,7 @@ function ListField({
 }
 
 export function SettingsView({ config, setConfig }: Props) {
-  const [section, setSection] = useState<"scoring" | "ai">("scoring");
+  const [section, setSection] = useState<"scoring" | "ai" | "key">("scoring");
   const [presets, setPresets] = useState<string[]>([]);
   const [presetName, setPresetName] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -127,6 +127,12 @@ export function SettingsView({ config, setConfig }: Props) {
         >
           AI (Классификатор)
         </button>
+        <button
+          className={section === "key" ? "on" : ""}
+          onClick={() => setSection("key")}
+        >
+          Ключ OpenAI
+        </button>
       </div>
 
       {warnings.length > 0 && (
@@ -138,11 +144,9 @@ export function SettingsView({ config, setConfig }: Props) {
       )}
       {msg && <div className="ok">{msg}</div>}
 
-      {section === "scoring" ? (
-        <ScoringSettings config={config} setConfig={setConfig} />
-      ) : (
-        <AiSettings />
-      )}
+      {section === "scoring" && <ScoringSettings config={config} setConfig={setConfig} />}
+      {section === "ai" && <AiSettings />}
+      {section === "key" && <KeySettings />}
 
       {section === "scoring" && (
       <div className="presets">
@@ -255,6 +259,77 @@ function ScoringSettings({ config, setConfig }: Props) {
             <option value="flag_only">flag_only (только пометка)</option>
           </select>
         </label>
+      </section>
+    </div>
+  );
+}
+
+function KeySettings() {
+  const [keySet, setKeySet] = useState(false);
+  const [key, setKey] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api.getAiSettings().then((r) => setKeySet(!!r.settings.api_keys_set?.openai));
+  }, []);
+
+  async function save() {
+    if (!key.trim()) return;
+    await api.saveAiSettings({ api_keys: { openai: key.trim() } });
+    setKeySet(true);
+    setKey("");
+    setMsg("Ключ OpenAI сохранён.");
+    setStatus(null);
+  }
+
+  async function verify() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      // Verify the just-typed key if present, otherwise the stored one.
+      const r = await api.verifyKey("openai", key.trim() || null);
+      setStatus({ ok: r.ok, text: r.message });
+    } catch (e: any) {
+      setStatus({ ok: false, text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="settings-grid">
+      <section className="card" style={{ gridColumn: "1 / -1" }}>
+        <h3>Ключ OpenAI</h3>
+        <p className="muted">
+          Ключ хранится на стороне панели, маскируется и не пишется в логи.
+          «Проверить» делает тестовый запрос к OpenAI и подтверждает валидность.
+        </p>
+        <label className="field wide">
+          <span>API-ключ {keySet ? "· сохранён ✓" : "· не задан"}</span>
+          <input
+            type="password"
+            placeholder={keySet ? "•••••••• (оставьте пустым, чтобы не менять)" : "sk-…"}
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+          />
+        </label>
+        <div className="preset-row" style={{ marginTop: 12 }}>
+          <button className="primary" onClick={save} disabled={!key.trim()}>
+            Сохранить
+          </button>
+          <button onClick={verify} disabled={busy || (!key.trim() && !keySet)}>
+            {busy ? "Проверка…" : "Проверить"}
+          </button>
+        </div>
+        {msg && <div className="ok" style={{ marginTop: 10 }}>{msg}</div>}
+        {status && (
+          <div className={status.ok ? "ok" : "error"} style={{ marginTop: 10 }}>
+            {status.ok ? "✓ " : "✕ "}
+            {status.text}
+          </div>
+        )}
       </section>
     </div>
   );
