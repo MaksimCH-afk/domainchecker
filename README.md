@@ -86,7 +86,7 @@ monopanel/
 ### Через Docker (как в monopanel)
 ```bash
 docker compose up --build
-# панель:  http://localhost:8080
+# панель:  http://localhost:43784
 ```
 
 ### Локальная разработка
