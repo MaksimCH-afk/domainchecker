@@ -144,11 +144,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.primary:hover:not(:disabled) { background: var(--accent-2); color: #fff; }
 
 /* Table */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+/* Own scroll viewport per table so the sticky header pins WITHIN this table's
+   block and can never linger past it into the next tool. */
+.table-wrap { overflow: auto; max-height: 70vh; border: 1px solid var(--border); border-radius: 10px; }
 table.results { border-collapse: collapse; width: 100%; font-size: 12.5px; white-space: nowrap; }
 .results th, .results td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.results th { background: var(--panel-2); position: sticky; top: 0; color: var(--muted);
-  font-weight: 600; }
+.results th { background: var(--panel-2); position: sticky; top: 0; z-index: 2; color: var(--muted);
+  font-weight: 600; box-shadow: inset 0 -1px 0 var(--border); }
 .results tr:hover td { background: #f7f9fc; }
 .results .num { text-align: right; font-variant-numeric: tabular-nums; }
 .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
