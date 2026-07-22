@@ -165,7 +165,11 @@ export const api = {
     return res.blob();
   },
 
-  async getAiSettings(): Promise<{ settings: any; provider_base_urls: Record<string, string> }> {
+  async getAiSettings(): Promise<{
+    settings: any;
+    provider_base_urls: Record<string, string>;
+    classifier_models: { id: string; label: string; recommended: boolean }[];
+  }> {
     return jsonOrThrow(await fetch("/api/classify/settings"));
   },
 

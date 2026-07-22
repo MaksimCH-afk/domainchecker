@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from ..classifier.providers import PROVIDER_BASE_URLS, verify_key
-from ..classifier.settings_defaults import masked_settings
+from ..classifier.settings_defaults import CLASSIFIER_MODELS, masked_settings
 
 router = APIRouter(prefix="/api/classify/settings", tags=["classify-settings"])
 
@@ -34,6 +34,7 @@ async def get_settings(request: Request):
     return {
         "settings": masked_settings(settings, store.has_keys()),
         "provider_base_urls": PROVIDER_BASE_URLS,
+        "classifier_models": CLASSIFIER_MODELS,
     }
 
 

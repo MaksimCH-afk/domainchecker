@@ -17,7 +17,9 @@ from .reject import check_reject
 from .scoring import compute_score
 
 TIERS = ["A", "B", "C", "Review", "Rejected"]
-REJECT_REASONS = ["dead", "spam_blast", "thin", "burn_hacked"]
+REJECT_REASONS = [
+    "dead", "dr_floor", "spam_blast", "thin", "burn_hacked", "spam_floor_reject",
+]
 
 
 @dataclass

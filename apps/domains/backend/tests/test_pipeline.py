@@ -82,6 +82,28 @@ def test_reject_spam_blast():
     assert r.tier == "Rejected" and r.reject_reason == "spam_blast"
 
 
+def test_reject_dr_floor():
+    # Correction 1а: DR=0 with ~30 followed ref.domains escapes dead/thin,
+    # but dr_floor (DR < 0.5) rejects it.
+    r = evaluate(DomainRecord.from_row(row(**{
+        "Domain Rating": "0", "Ref. domains / Followed": "30",
+        "Ref. domains / All": "300", "Backlinks / All": "330",
+    })), CFG)
+    assert r.tier == "Rejected" and r.reject_reason == "dr_floor"
+
+
+def test_spam_floor_reject_optional():
+    # Off by default -> a DR 1.5 spammy domain passes reject.
+    base = row(**{"Domain Rating": "1.5", "Ref. domains / All": "200",
+                  "Ref. domains / Followed": "10", "Backlinks / All": "240",
+                  "Organic / Traffic": "0"})
+    assert evaluate(DomainRecord.from_row(base), CFG).reject_reason is None
+    # Enabled -> rejected (fol_share=0.05<0.15, bl_rd=1.2<=1.3, org=0).
+    cfg = merge_with_defaults({"reject": {"spam_floor_reject": {"enabled": True}}})
+    r = evaluate(DomainRecord.from_row(base), cfg)
+    assert r.tier == "Rejected" and r.reject_reason == "spam_floor_reject"
+
+
 def test_reject_thin():
     r = evaluate(DomainRecord.from_row(row(**{
         "Domain Rating": "1", "Ref. domains / Followed": "1",

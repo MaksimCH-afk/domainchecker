@@ -64,7 +64,7 @@ class RunManager:
     async def _run(self, store, run_id, parsed, settings, ignore_cache) -> None:
         state = {"processed": 0, "good": 0, "bad": 0, "review": 0, "errors": 0,
                  "prompt_tokens": 0, "completion_tokens": 0, "est_cost": 0.0}
-        threshold = float(settings.get("confidence_threshold", 0.7))
+        # Correction 1: bucketing is by verdict only — no confidence threshold.
         batch_size = int(settings.get("batch_size", 50))
         concurrency = max(1, int(settings.get("concurrency", 4)))
         max_retries = int(settings.get("max_retries", 3))
@@ -75,7 +75,7 @@ class RunManager:
         def persist(classifications: list[Classification], run_id=run_id):
             rows = []
             for c in classifications:
-                bucket = assign_bucket(c, threshold)
+                bucket = assign_bucket(c)
                 state[bucket] += 1
                 state["processed"] += 1
                 rows.append({

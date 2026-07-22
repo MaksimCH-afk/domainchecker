@@ -15,11 +15,14 @@ class Classification:
     domain: str
     verdict: str            # good | bad | error
     category: str
-    name_language: str
-    is_english_name: bool
+    name_language: str      # reference only (Correction 1)
+    is_english_name: bool   # reference only (Correction 1)
     matched_terms: list[str] = field(default_factory=list)
-    confidence: float = 0.0
+    confidence: float = 0.0  # reference only (Correction 1/4)
     reason: str = ""
+    # Correction 1: optional red flag — model can't choose clean vs a bad
+    # category and asks for manual review.
+    needs_review: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -31,6 +34,7 @@ class Classification:
             "matched_terms": self.matched_terms,
             "confidence": self.confidence,
             "reason": self.reason,
+            "needs_review": self.needs_review,
         }
 
 
@@ -38,6 +42,7 @@ def error_result(domain: str, reason: str) -> Classification:
     return Classification(
         domain=domain, verdict="error", category="", name_language="",
         is_english_name=False, matched_terms=[], confidence=0.0, reason=reason,
+        needs_review=False,
     )
 
 
@@ -82,6 +87,7 @@ def _coerce_item(obj: dict) -> Optional[Classification]:
         matched_terms=[str(t) for t in terms],
         confidence=confidence,
         reason=str(obj.get("reason", "")),
+        needs_review=bool(obj.get("needs_review", False)),
     )
 
 

@@ -45,17 +45,20 @@ def c(**kw) -> Classification:
     return Classification(**base)
 
 
-def test_bucket_rules_order():
-    # rule 1: low confidence -> review
-    assert assign_bucket(c(confidence=0.5), 0.7) == "review"
-    # rule 1: error -> review
-    assert assign_bucket(c(verdict="error", confidence=1.0), 0.7) == "review"
-    # rule 2: bad -> bad (even if foreign)
-    assert assign_bucket(c(verdict="bad", is_english_name=False), 0.7) == "bad"
-    # rule 3: foreign english=false -> review
-    assert assign_bucket(c(is_english_name=False), 0.7) == "review"
-    # rule 4: clean english -> good
-    assert assign_bucket(c(), 0.7) == "good"
+def test_bucket_rules_by_verdict_only():
+    # Correction 1: language and confidence NO LONGER affect the bucket.
+    # error -> review
+    assert assign_bucket(c(verdict="error")) == "review"
+    # needs_review -> review
+    assert assign_bucket(c(needs_review=True)) == "review"
+    # bad -> bad (any language)
+    assert assign_bucket(c(verdict="bad", is_english_name=False)) == "bad"
+    # clean foreign name -> GOOD (was review before the correction)
+    assert assign_bucket(c(is_english_name=False)) == "good"
+    # low confidence clean -> GOOD (confidence no longer gates)
+    assert assign_bucket(c(confidence=0.0)) == "good"
+    # clean english -> good
+    assert assign_bucket(c()) == "good"
 
 
 # --- FR-9/FR-10 schema parsing --------------------------------------------
@@ -83,13 +86,12 @@ def test_parse_response_missing_domain_raises():
 
 def test_engine_full_run_with_mock(tmp_path):
     store = ClassifierStore(str(tmp_path / "c.db"))
-    store.save_settings({"provider": "mock", "confidence_threshold": 0.7,
-                         "batch_size": 2, "concurrency": 2})
+    store.save_settings({"provider": "mock", "batch_size": 2, "concurrency": 2})
 
     text = "\n".join([
         "cleansite.com",           # good
         "bestcasino.net",          # bad (gambling)
-        "medienverbesserer.com",   # foreign name -> review
+        "medienverbesserer.com",   # foreign but CLEAN name -> good now
         "not a domain",            # invalid -> review (error)
         "pornhub-clone.com",       # bad (adult)
     ])
@@ -106,14 +108,15 @@ def test_engine_full_run_with_mock(tmp_path):
     assert run["status"] == "done"
     assert run["total"] == 5 and run["processed"] == 5
     assert run["bad"] == 2
-    assert run["review"] >= 2      # foreign name + invalid
-    assert run["good"] == 1
+    assert run["review"] == 1      # only the invalid domain
+    assert run["good"] == 2        # clean english + clean foreign name
 
     results = store.get_results(run_id)
     by = {r["domain"]: r for r in results}
     assert by["bestcasino.net"]["bucket"] == "bad"
     assert by["bestcasino.net"]["category"] == "gambling"
-    assert by["medienverbesserer.com"]["bucket"] == "review"
+    # Correction 2: a clean foreign name is Good, not Review.
+    assert by["medienverbesserer.com"]["bucket"] == "good"
 
 
 def test_engine_cache_reuse(tmp_path):

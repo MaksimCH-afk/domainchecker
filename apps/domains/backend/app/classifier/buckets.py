@@ -1,10 +1,11 @@
-"""Fixed bucket rules (§6 of TZ-2). No language settings — by design.
+"""Fixed bucket rules — Correction 1 (raskladka by verdict only).
 
-Applied in order, first match wins:
-  1. confidence < threshold OR verdict == error -> Review
-  2. verdict == bad                              -> Bad
-  3. is_english_name == false                    -> Review
-  4. otherwise                                   -> Good
+Neither the name language nor `confidence` affect the bucket anymore. They stay
+in the response purely as reference columns. Applied in order, first match wins:
+  1. verdict == error / invalid / unparsed        -> Review
+  2. needs_review == true (model can't decide)     -> Review
+  3. verdict == bad (any category, category rules) -> Bad
+  4. verdict == good                               -> Good
 """
 
 from __future__ import annotations
@@ -16,11 +17,11 @@ BAD = "bad"
 REVIEW = "review"
 
 
-def assign_bucket(c: Classification, confidence_threshold: float) -> str:
-    if c.verdict == "error" or c.confidence < confidence_threshold:
+def assign_bucket(c: Classification) -> str:
+    if c.verdict == "error":
+        return REVIEW
+    if c.needs_review:
         return REVIEW
     if c.verdict == "bad":
         return BAD
-    if not c.is_english_name:
-        return REVIEW
-    return GOOD
+    return GOOD  # verdict == good, any language

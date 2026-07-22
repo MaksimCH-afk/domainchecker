@@ -220,12 +220,17 @@ function ScoringSettings({ config, setConfig }: Props) {
       </section>
 
       <section className="card">
-        <h3>Отсев · dead / spam_blast (§5)</h3>
+        <h3>Отсев · dr_floor / spam_blast</h3>
         <div className="fields">
+          <Num {...p} path="reject.dr_floor.dr_min" label="dr_floor dr_min" step={0.5} />
           <Num {...p} path="reject.spam_blast.bl_rd_min" label="spam bl_rd_min" step={0.1} />
           <Num {...p} path="reject.spam_blast.bl_rd_max" label="spam bl_rd_max" step={0.1} />
           <Num {...p} path="reject.spam_blast.rd_all_min" label="spam rd_all_min" />
         </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          dr_floor режет всё с DR ниже порога (дефолт 0.5 — убирает DR=0, даже с
+          наполненным ссылочным).
+        </p>
       </section>
 
       <section className="card">
@@ -235,6 +240,24 @@ function ScoringSettings({ config, setConfig }: Props) {
           <Num {...p} path="reject.thin.dr_max" label="thin dr_max" />
           <Num {...p} path="reject.burn_hacked.burn_min" label="burn_min" />
           <Num {...p} path="reject.burn_hacked.dr_max" label="burn dr_max" />
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Отсев · spam_floor_reject (опционально)</h3>
+        <label className="field wide raw-toggle">
+          <input
+            type="checkbox"
+            checked={!!config.reject.spam_floor_reject?.enabled}
+            onChange={(e) =>
+              setConfig(setPath(config, "reject.spam_floor_reject.enabled", e.target.checked))
+            }
+          />
+          Включить (ловит спам-породу при DR 1–2)
+        </label>
+        <div className="fields">
+          <Num {...p} path="reject.spam_floor_reject.fol_share_max" label="fol_share_max" step={0.05} />
+          <Num {...p} path="reject.spam_floor_reject.bl_rd_max" label="bl_rd_max" step={0.1} />
         </div>
       </section>
 
@@ -335,11 +358,48 @@ function KeySettings() {
   );
 }
 
-const MODEL_SUGGESTIONS = ["gpt-5.4-mini", "gpt-5-nano", "gpt-4.1-nano"];
+function ModelPicker({
+  model,
+  models,
+  onChange,
+}: {
+  model: string;
+  models: { id: string; label: string }[];
+  onChange: (m: string) => void;
+}) {
+  const known = models.some((m) => m.id === model);
+  return (
+    <label className="field">
+      <span>Модель классификатора</span>
+      <select
+        value={known ? model : "__custom"}
+        onChange={(e) =>
+          onChange(e.target.value === "__custom" ? "" : e.target.value)
+        }
+      >
+        {models.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label}
+          </option>
+        ))}
+        <option value="__custom">Другая (ручной ввод)…</option>
+      </select>
+      {!known && (
+        <input
+          style={{ marginTop: 6 }}
+          placeholder="имя модели, напр. gpt-4.1-mini"
+          value={model}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </label>
+  );
+}
 
 function AiSettings() {
   const [s, setS] = useState<any | null>(null);
   const [keysSet, setKeysSet] = useState<Record<string, boolean>>({});
+  const [models, setModels] = useState<{ id: string; label: string }[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [keyInputs, setKeyInputs] = useState<{ openai: string; openrouter: string }>({
     openai: "",
@@ -350,6 +410,7 @@ function AiSettings() {
     api.getAiSettings().then((r) => {
       setS(r.settings);
       setKeysSet(r.settings.api_keys_set || {});
+      setModels(r.classifier_models || []);
     });
   }, []);
 
@@ -375,7 +436,11 @@ function AiSettings() {
   return (
     <div className="settings-grid">
       <section className="card">
-        <h3>Провайдер и модель</h3>
+        <h3>Провайдер и модель классификатора</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Модель применяется только в блоке <b>Классификатор по имени</b>.
+          Анализатор (Ahrefs-фильтр) — чистая математика и модель не использует.
+        </p>
         <div className="fields">
           <label className="field">
             <span>Провайдер</span>
@@ -385,19 +450,11 @@ function AiSettings() {
               <option value="mock">Mock (офлайн-демо)</option>
             </select>
           </label>
-          <label className="field">
-            <span>Модель</span>
-            <input
-              list="models"
-              value={s.model}
-              onChange={(e) => set("model", e.target.value)}
-            />
-            <datalist id="models">
-              {MODEL_SUGGESTIONS.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
-          </label>
+          <ModelPicker
+            model={s.model}
+            models={models}
+            onChange={(m) => set("model", m)}
+          />
           <label className="field wide">
             <span>base_url (необязательно, OpenAI-совместимый)</span>
             <input value={s.base_url} onChange={(e) => set("base_url", e.target.value)} />
@@ -460,12 +517,12 @@ function AiSettings() {
             <input type="number" value={s.max_retries}
               onChange={(e) => set("max_retries", Number(e.target.value))} />
           </label>
-          <label className="field">
-            <span>порог confidence</span>
-            <input type="number" step={0.05} value={s.confidence_threshold}
-              onChange={(e) => set("confidence_threshold", Number(e.target.value))} />
-          </label>
         </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          Раскладка идёт только по вердикту модели (good/bad/error).
+          Порога confidence больше нет — уверенность и язык имени лишь справочные
+          колонки в таблице.
+        </p>
       </section>
 
       <section className="card">

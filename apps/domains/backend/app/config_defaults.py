@@ -11,6 +11,10 @@ from __future__ import annotations
 # to JSON for the frontend and to YAML/JSON presets on disk.
 DEFAULT_CONFIG: dict = {
     "reject": {
+        # Correction 1а: mandatory DR floor — reject anything under dr_min.
+        # Default 0.5 kills DR=0 (and near-zero) domains that slip past
+        # dead/thin because they carry ~30 followed ref.domains.
+        "dr_floor": {"dr_min": 0.5},
         "dead": {"dr_eq": 0, "rd_fol_eq": 0},
         "spam_blast": {
             "rd_fol_eq": 0,
@@ -20,6 +24,13 @@ DEFAULT_CONFIG: dict = {
         },
         "thin": {"rd_fol_max": 3, "dr_max": 2},
         "burn_hacked": {"burn_min": 1000, "dr_max": 15, "org_eq": 0},
+        # Correction 1б: optional — same spam breed at DR 1-2. Off by default.
+        "spam_floor_reject": {
+            "enabled": False,
+            "fol_share_max": 0.15,
+            "bl_rd_max": 1.3,
+            "org_eq": 0,
+        },
     },
     "score": {
         "weights": {
